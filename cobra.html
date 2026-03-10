@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cobra — The Viper Language</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#2d333b;
+  --border:#30363d;--border2:#444c56;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --green:#3fb950;--green-dim:#1a3a22;
+  --blue:#58a6ff;--blue-dim:#0d2a4a;
+  --orange:#f0883e;--orange-dim:#3a1f0a;
+  --purple:#bc8cff;--purple-dim:#2a1a4a;
+  --red:#f85149;--red-dim:#3a1010;
+  --yellow:#e3b341;--yellow-dim:#3a2a00;
+  --cyan:#39d0d8;--cyan-dim:#0a2a2e;
+}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  display:flex;flex-direction:column;
+  font-size:14px;
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  display:flex;align-items:center;gap:16px;
+  padding:0 16px;height:48px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;
+  color:var(--green);letter-spacing:-0.5px;}
+.logo span{color:var(--text2);font-weight:400;}
+.topbar-btns{display:flex;gap:8px;margin-left:auto;}
+.btn{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:6px;border:1px solid var(--border2);
+  background:var(--bg3);color:var(--text);font-size:0.82rem;
+  cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;
+  transition:all 0.15s;white-space:nowrap;
+}
+.btn:hover{background:var(--bg4);border-color:var(--text3);}
+.btn.primary{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.btn.primary:hover{background:#1f4a2a;}
+.btn.active{background:var(--blue-dim);border-color:var(--blue);color:var(--blue);}
+.btn.danger{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+.btn.step{background:var(--yellow-dim);border-color:var(--yellow);color:var(--yellow);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ── MAIN LAYOUT ── */
+.main{flex:1;display:grid;grid-template-columns:220px 1fr 1fr 300px;overflow:hidden;}
+
+/* ── LESSONS SIDEBAR ── */
+.sidebar{
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sidebar-title{
+  padding:12px 14px;font-family:'Syne',sans-serif;font-size:0.75rem;
+  font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--text3);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.lessons{overflow-y:auto;flex:1;}
+.lesson-group{border-bottom:1px solid var(--border);}
+.lesson-group-title{
+  padding:8px 14px;font-size:0.7rem;font-weight:600;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);
+  background:var(--bg);
+}
+.lesson-item{
+  padding:9px 14px;cursor:pointer;font-size:0.82rem;
+  color:var(--text2);transition:all 0.12s;display:flex;align-items:center;gap:8px;
+  border-left:3px solid transparent;
+}
+.lesson-item:hover{background:var(--bg3);color:var(--text);}
+.lesson-item.active{background:var(--bg3);color:var(--green);border-left-color:var(--green);}
+.lesson-item .badge{
+  margin-left:auto;font-size:0.65rem;padding:2px 6px;border-radius:10px;
+  background:var(--bg4);color:var(--text3);
+}
+
+/* ── EDITOR PANEL ── */
+.editor-panel{display:flex;flex-direction:column;border-right:1px solid var(--border);}
+.panel-header{
+  display:flex;align-items:center;gap:10px;padding:0 14px;
+  height:38px;background:var(--bg2);border-bottom:1px solid var(--border);
+  flex-shrink:0;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);
+}
+.panel-header .actions{margin-left:auto;display:flex;gap:6px;}
+.editor-wrap{flex:1;position:relative;overflow:hidden;}
+#editor{
+  width:100%;height:100%;
+  background:var(--bg);color:var(--text);
+  font-family:'IBM Plex Mono',monospace;font-size:0.88rem;line-height:1.8;
+  padding:16px;border:none;outline:none;resize:none;
+  tab-size:2;
+}
+.line-highlight{
+  position:absolute;left:0;right:0;height:1.8em;
+  background:rgba(88,166,255,0.08);pointer-events:none;
+  border-left:2px solid var(--blue);transition:top 0.1s;
+  display:none;
+}
+
+/* ── OUTPUT PANEL ── */
+.output-panel{display:flex;flex-direction:column;border-right:1px solid var(--border);}
+#output{
+  flex:1;overflow-y:auto;
+  padding:14px;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;
+  line-height:1.8;background:var(--bg);
+}
+.out{display:block;}
+.out.val{color:var(--text);}
+.out.info{color:var(--green);}
+.out.err{color:var(--red);}
+.out.warn{color:var(--yellow);}
+.out.system{color:var(--text3);font-style:italic;}
+.out.prompt{color:var(--cyan);}
+.out.pyeq{color:var(--purple);font-size:0.78rem;border-left:2px solid var(--purple);padding-left:8px;margin:2px 0;}
+.out.step-marker{color:var(--yellow);font-size:0.75rem;}
+#input-row{display:flex;align-items:center;padding:8px 14px;
+  background:var(--bg2);border-top:1px solid var(--border);gap:8px;flex-shrink:0;}
+#input-row.hidden{display:none;}
+#input-row label{color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:0.85rem;}
+#user-input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border2);
+  color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.85rem;
+  padding:4px 6px;outline:none;}
+#submit-input{background:var(--cyan-dim);border:1px solid var(--cyan);color:var(--cyan);
+  padding:4px 12px;border-radius:4px;cursor:pointer;font-size:0.8rem;font-family:'DM Sans',sans-serif;}
+
+/* ── REFERENCE PANEL ── */
+.ref-panel{
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--bg2);
+}
+.ref-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.ref-tab{
+  padding:8px 12px;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;
+  color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;
+  transition:all 0.12s;
+}
+.ref-tab:hover{color:var(--text2);}
+.ref-tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+.ref-content{flex:1;overflow-y:auto;padding:14px;}
+.ref-content.hidden{display:none;}
+.ref-section{margin-bottom:18px;}
+.ref-section h3{
+  font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--text3);
+  margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);
+}
+.ref-row{
+  font-family:'IBM Plex Mono',monospace;font-size:0.75rem;
+  line-height:1.7;color:var(--text2);margin-bottom:4px;
+}
+.ref-row em{color:var(--green);font-style:normal;font-weight:500;}
+.ref-row .comment{color:var(--text3);font-size:0.7rem;}
+.pybox{
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;margin-top:4px;
+  font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+  color:var(--purple);line-height:1.6;
+}
+.pybox::before{content:'Python →';display:block;color:var(--text3);font-size:0.65rem;margin-bottom:4px;}
+
+/* ── VARIABLES INSPECTOR ── */
+.vars-panel{
+  background:var(--bg);border-top:1px solid var(--border);
+  max-height:160px;overflow-y:auto;flex-shrink:0;
+}
+.vars-title{
+  padding:6px 14px;font-size:0.68rem;letter-spacing:2px;text-transform:uppercase;
+  color:var(--text3);background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.vars-grid{display:flex;flex-wrap:wrap;gap:6px;padding:10px;}
+.var-chip{
+  background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:4px 10px;font-family:'IBM Plex Mono',monospace;font-size:0.75rem;
+  display:flex;gap:6px;align-items:center;
+}
+.var-chip .vname{color:var(--blue);}
+.var-chip .vval{color:var(--orange);}
+.var-chip .vtype{color:var(--text3);font-size:0.65rem;}
+
+/* Scrollbars */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">🐍 Cobra</div>
+  <div style="font-size:0.75rem;color:var(--text3);">Viper — write code like instructions</div>
+  <div class="topbar-btns">
+    <button class="btn step" id="stepBtn" onclick="startStep()">⏭ Step Mode</button>
+    <button class="btn step" id="nextBtn" onclick="stepNext()" disabled>→ Next Line</button>
+    <button class="btn primary" onclick="runCode()">▶ Run</button>
+    <button class="btn danger" onclick="stopCode()" id="stopBtn" disabled>■ Stop</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- LESSONS -->
+  <div class="sidebar">
+    <div class="sidebar-title">📚 Lessons</div>
+    <div class="lessons" id="lessonList"></div>
+  </div>
+
+  <!-- EDITOR -->
+  <div class="editor-panel">
+    <div class="panel-header">
+      ✏️ Editor
+      <div class="actions">
+        <button class="btn" onclick="clearEditor()">Clear</button>
+      </div>
+    </div>
+    <div class="editor-wrap">
+      <div class="line-highlight" id="lineHL"></div>
+      <textarea id="editor" spellcheck="false" placeholder="Write your Cobra here..."></textarea>
+    </div>
+    <div class="vars-panel">
+      <div class="vars-title">
+        <span>🔍 Variables</span>
+        <span id="varCount" style="color:var(--text3);font-size:0.7rem;">empty</span>
+      </div>
+      <div class="vars-grid" id="varsGrid"></div>
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="output-panel">
+    <div class="panel-header">
+      📄 Output
+      <div class="actions">
+        <button class="btn" onclick="clearOutput()">Clear</button>
+      </div>
+    </div>
+    <div id="output"><span class="out system">// Cobra ready. Pick a lesson or write your own code.</span>
+</div>
+    <div id="input-row" class="hidden">
+      <label>▶</label>
+      <input id="user-input" type="text" placeholder="Type your answer..." autocomplete="off">
+      <button id="submit-input" onclick="submitInput()">Enter</button>
+    </div>
+  </div>
+
+  <!-- REFERENCE -->
+  <div class="ref-panel">
+    <div class="ref-tabs">
+      <div class="ref-tab active" onclick="showRef('syntax')">Syntax</div>
+      <div class="ref-tab" onclick="showRef('python')">Python</div>
+      <div class="ref-tab" onclick="showRef('errors')">Errors</div>
+    </div>
+    <div class="ref-content" id="ref-syntax">
+      <div class="ref-section">
+        <h3>Variables</h3>
+        <div class="ref-row"><em>set</em> x <em>to</em> 42</div>
+        <div class="ref-row"><em>set</em> name <em>to</em> "Alice"</div>
+        <div class="ref-row"><em>add</em> 5 <em>to</em> x</div>
+        <div class="ref-row"><em>subtract</em> 3 <em>from</em> x</div>
+        <div class="ref-row"><em>multiply</em> x <em>by</em> 2</div>
+        <div class="ref-row"><em>divide</em> x <em>by</em> 4</div>
+      </div>
+      <div class="ref-section">
+        <h3>Lists</h3>
+        <div class="ref-row"><em>create list</em> fruits</div>
+        <div class="ref-row"><em>add</em> "apple" <em>to list</em> fruits</div>
+        <div class="ref-row"><em>get item</em> 0 <em>from</em> fruits</div>
+        <div class="ref-row"><em>get items</em> 0 <em>to</em> 2 <em>from</em> fruits <span class="comment">// slice</span></div>
+        <div class="ref-row"><em>count</em> fruits</div>
+        <div class="ref-row"><em>sort</em> fruits</div>
+        <div class="ref-row"><em>reverse</em> fruits</div>
+        <div class="ref-row"><em>remove item</em> 0 <em>from</em> fruits</div>
+        <div class="ref-row"><em>for each</em> item <em>in</em> fruits <em>say</em> item</div>
+      </div>
+      <div class="ref-section">
+        <h3>Dictionaries</h3>
+        <div class="ref-row"><em>create dict</em> person</div>
+        <div class="ref-row"><em>set key</em> "name" <em>in</em> person <em>to</em> "Ali"</div>
+        <div class="ref-row"><em>get key</em> "name" <em>from</em> person</div>
+        <div class="ref-row"><em>remove key</em> "name" <em>from</em> person</div>
+        <div class="ref-row"><em>for each key in</em> person <em>say</em> key</div>
+      </div>
+      <div class="ref-section">
+        <h3>Control Flow</h3>
+        <div class="ref-row"><em>if</em> x <em>is</em> 5 <em>say</em> "yes"</div>
+        <div class="ref-row"><em>if</em> x <em>is greater than</em> 3 ...</div>
+        <div class="ref-row"><em>if</em> x <em>is less than</em> 10 ...</div>
+        <div class="ref-row"><em>if</em> x <em>is not</em> 0 ...</div>
+        <div class="ref-row"><em>otherwise say</em> "no"</div>
+        <div class="ref-row"><em>repeat</em> 5 <em>times say</em> "hi"</div>
+        <div class="ref-row"><em>while</em> x <em>is less than</em> 10 <em>add</em> 1 <em>to</em> x</div>
+      </div>
+      <div class="ref-section">
+        <h3>Functions</h3>
+        <div class="ref-row"><em>define</em> greet <em>with</em> name</div>
+        <div class="ref-row">&nbsp;&nbsp;<em>say</em> "Hello " + name</div>
+        <div class="ref-row"><em>end define</em></div>
+        <div class="ref-row"><em>call</em> greet <em>with</em> "Ali"</div>
+        <div class="ref-row"><em>define</em> double <em>with</em> n</div>
+        <div class="ref-row">&nbsp;&nbsp;<em>return</em> n * 2</div>
+        <div class="ref-row"><em>end define</em></div>
+        <div class="ref-row"><em>set</em> result <em>to call</em> double <em>with</em> 5</div>
+      </div>
+      <div class="ref-section">
+        <h3>Regex</h3>
+        <div class="ref-row"><em>check if</em> email <em>matches</em> "[a-z]+@[a-z]+\.[a-z]+"</div>
+        <div class="ref-row"><em>find pattern</em> "\d+" <em>in</em> text</div>
+        <div class="ref-row"><em>replace pattern</em> "\s+" <em>in</em> text <em>with</em> "-"</div>
+      </div>
+      <div class="ref-section">
+        <h3>Algorithms</h3>
+        <div class="ref-row"><em>sort</em> nums <span class="comment">// ascending</span></div>
+        <div class="ref-row"><em>sort</em> nums <em>descending</em></div>
+        <div class="ref-row"><em>find max in</em> nums</div>
+        <div class="ref-row"><em>find min in</em> nums</div>
+        <div class="ref-row"><em>find sum of</em> nums</div>
+        <div class="ref-row"><em>find average of</em> nums</div>
+        <div class="ref-row"><em>check if</em> nums <em>contains</em> 5</div>
+        <div class="ref-row"><em>find index of</em> 5 <em>in</em> nums</div>
+        <div class="ref-row"><em>filter</em> nums <em>where greater than</em> 3</div>
+      </div>
+    </div>
+
+    <div class="ref-content hidden" id="ref-python">
+      <div class="ref-section">
+        <h3>Variables → Python</h3>
+        <div class="ref-row"><em>set x to 5</em></div>
+        <div class="pybox">x = 5</div>
+        <div class="ref-row" style="margin-top:8px"><em>add 1 to x</em></div>
+        <div class="pybox">x += 1</div>
+      </div>
+      <div class="ref-section">
+        <h3>Lists → Python</h3>
+        <div class="ref-row"><em>create list fruits</em></div>
+        <div class="pybox">fruits = []</div>
+        <div class="ref-row" style="margin-top:8px"><em>add "apple" to list fruits</em></div>
+        <div class="pybox">fruits.append("apple")</div>
+        <div class="ref-row" style="margin-top:8px"><em>get items 0 to 2 from fruits</em></div>
+        <div class="pybox">fruits[0:2]</div>
+        <div class="ref-row" style="margin-top:8px"><em>for each item in fruits say item</em></div>
+        <div class="pybox">for item in fruits:<br>&nbsp;&nbsp;print(item)</div>
+      </div>
+      <div class="ref-section">
+        <h3>Dictionaries → Python</h3>
+        <div class="ref-row"><em>create dict person</em></div>
+        <div class="pybox">person = {}</div>
+        <div class="ref-row" style="margin-top:8px"><em>set key "name" in person to "Ali"</em></div>
+        <div class="pybox">person["name"] = "Ali"</div>
+      </div>
+      <div class="ref-section">
+        <h3>Functions → Python</h3>
+        <div class="ref-row"><em>define greet with name</em></div>
+        <div class="pybox">def greet(name):<br>&nbsp;&nbsp;print("Hello " + name)</div>
+        <div class="ref-row" style="margin-top:8px"><em>call greet with "Ali"</em></div>
+        <div class="pybox">greet("Ali")</div>
+      </div>
+      <div class="ref-section">
+        <h3>Regex → Python</h3>
+        <div class="ref-row"><em>check if text matches "[a-z]+"</em></div>
+        <div class="pybox">import re<br>re.fullmatch("[a-z]+", text)</div>
+        <div class="ref-row" style="margin-top:8px"><em>find pattern "\d+" in text</em></div>
+        <div class="pybox">re.findall("\d+", text)</div>
+      </div>
+    </div>
+
+    <div class="ref-content hidden" id="ref-errors">
+      <div class="ref-section">
+        <h3>Common Mistakes</h3>
+        <div class="ref-row" style="color:var(--red)">Variable not found</div>
+        <div class="ref-row">You used a variable before creating it. Use <em>set x to ...</em> first.</div>
+        <div class="ref-row" style="color:var(--red);margin-top:8px">Cannot divide by zero</div>
+        <div class="ref-row">The number you're dividing by is 0. Check your variable value.</div>
+        <div class="ref-row" style="color:var(--red);margin-top:8px">List index out of range</div>
+        <div class="ref-row">Lists start at index 0. If your list has 3 items, valid indexes are 0, 1, 2.</div>
+        <div class="ref-row" style="color:var(--red);margin-top:8px">Key not found in dict</div>
+        <div class="ref-row">That key doesn't exist yet. Use <em>set key</em> first.</div>
+        <div class="ref-row" style="color:var(--red);margin-top:8px">Function not defined</div>
+        <div class="ref-row">You're calling a function that doesn't exist. Define it first with <em>define ... end define</em>.</div>
+        <div class="ref-row" style="color:var(--red);margin-top:8px">Infinite loop risk</div>
+        <div class="ref-row">Your <em>while</em> loop may never stop. Make sure the condition eventually becomes false.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  Cobra — Full Interpreter
+// ══════════════════════════════════════════════════════
+
+let vars = {};
+let funcs = {};
+let running = false;
+let stepMode = false;
+let stepLines = [];
+let stepIndex = 0;
+let stepVars = {};
+let inputResolve = null;
+let showPyEquiv = true;
+
+const outputEl = document.getElementById('output');
+const inputRow = document.getElementById('input-row');
+const userInputEl = document.getElementById('user-input');
+const editorEl = document.getElementById('editor');
+const lineHL = document.getElementById('lineHL');
+
+// ── OUTPUT ────────────────────────────────────────────
+
+function print(text, type='val') {
+  const s = document.createElement('span');
+  s.className = `out ${type}`;
+  s.textContent = text;
+  outputEl.appendChild(s);
+  outputEl.appendChild(document.createTextNode('\n'));
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+function pyEquiv(ws, py) {
+  if (!showPyEquiv) return;
+  print(`  ≡ Python: ${py}`, 'pyeq');
+}
+
+function clearOutput() {
+  outputEl.innerHTML = '';
+}
+
+function clearEditor() {
+  editorEl.value = '';
+  updateVarsPanel({});
+}
+
+function promptUser(question) {
+  return new Promise(resolve => {
+    print('? ' + question, 'prompt');
+    inputRow.classList.remove('hidden');
+    userInputEl.focus();
+    inputResolve = resolve;
+  });
+}
+
+function submitInput() {
+  if (!inputResolve) return;
+  const val = userInputEl.value;
+  print('  → ' + val, 'system');
+  userInputEl.value = '';
+  inputRow.classList.add('hidden');
+  const r = inputResolve; inputResolve = null;
+  r(val);
+}
+
+document.getElementById('user-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitInput();
+});
+
+// ── VARS PANEL ────────────────────────────────────────
+
+function updateVarsPanel(v) {
+  const grid = document.getElementById('varsGrid');
+  const count = document.getElementById('varCount');
+  const entries = Object.entries(v);
+  count.textContent = entries.length ? `${entries.length} variable${entries.length>1?'s':''}` : 'empty';
+  grid.innerHTML = '';
+  for (const [k, val] of entries) {
+    const type = Array.isArray(val) ? 'list' : typeof val === 'object' && val !== null ? 'dict' : typeof val;
+    const display = Array.isArray(val) ? `[${val.map(x=>JSON.stringify(x)).join(', ')}]`
+      : typeof val === 'object' && val !== null ? '{dict}'
+      : JSON.stringify(val);
+    const chip = document.createElement('div');
+    chip.className = 'var-chip';
+    chip.innerHTML = `<span class="vname">${k}</span><span class="vval">${display.length>20?display.slice(0,18)+'…':display}</span><span class="vtype">${type}</span>`;
+    grid.appendChild(chip);
+  }
+}
+
+// ── EXPRESSION EVALUATOR ──────────────────────────────
+
+function evalExpr(expr, v) {
+  if (expr === undefined || expr === null) return '';
+  expr = expr.trim();
+
+  // Arithmetic: handle * and /
+  // Try to split on + and - for strings too
+  // First handle multiplication and division
+  const numResult = tryArith(expr, v);
+  if (numResult !== null) return numResult;
+
+  // String concat with +
+  const parts = smartSplitPlus(expr);
+  if (parts.length > 1) {
+    return parts.map(p => String(evalExpr(p.trim(), v))).join('');
+  }
+
+  // Quoted string
+  if (/^["'].*["']$/.test(expr)) return expr.slice(1, -1);
+
+  // Number
+  if (!isNaN(expr) && expr !== '') return parseFloat(expr);
+
+  // Boolean
+  if (expr === 'true') return true;
+  if (expr === 'false') return false;
+
+  // Variable
+  if (v.hasOwnProperty(expr)) return v[expr];
+
+  // Return as string
+  return expr;
+}
+
+function tryArith(expr, v) {
+  // Only try arithmetic if there's an operator and no quotes
+  if (!/[+\-*\/]/.test(expr)) return null;
+  if (/["']/.test(expr)) return null;
+  // Replace variable names with values
+  const replaced = expr.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g, (m) => {
+    if (v.hasOwnProperty(m)) return Number(v[m]) || 0;
+    return m;
+  });
+  try {
+    // Safe eval for arithmetic only
+    if (/^[\d\s\+\-\*\/\.\(\)]+$/.test(replaced)) {
+      return Function('"use strict"; return (' + replaced + ')')();
+    }
+  } catch(e) {}
+  return null;
+}
+
+function smartSplitPlus(str) {
+  const parts = []; let cur = ''; let inStr = false; let sc = '';
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (inStr) { cur += c; if (c === sc) inStr = false; }
+    else if (c === '"' || c === "'") { inStr = true; sc = c; cur += c; }
+    else if (c === '+') { parts.push(cur); cur = ''; }
+    else cur += c;
+  }
+  parts.push(cur);
+  return parts.length > 1 ? parts : [str];
+}
+
+function tokenize(line) {
+  const tokens = []; let cur = ''; let inStr = false; let sc = '';
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inStr) { cur += c; if (c === sc) { tokens.push(cur); cur = ''; inStr = false; } }
+    else if (c === '"' || c === "'") { inStr = true; sc = c; cur = c; }
+    else if (c === ' ' || c === '\t') { if (cur) { tokens.push(cur); cur = ''; } }
+    else cur += c;
+  }
+  if (cur) tokens.push(cur);
+  return tokens;
+}
+
+// ── CONDITION EVALUATOR ───────────────────────────────
+
+function evalCond(tokens, v) {
+  const s = tokens.join(' ');
+  const lhs = evalExpr(tokens[0], v);
+  if (/^(\S+) is greater than or equal to (.+)$/.test(s)) return Number(lhs) >= Number(evalExpr(RegExp.$2, v));
+  if (/^(\S+) is less than or equal to (.+)$/.test(s)) return Number(lhs) <= Number(evalExpr(RegExp.$2, v));
+  if (/^(\S+) is greater than (.+)$/.test(s)) return Number(lhs) > Number(evalExpr(RegExp.$2, v));
+  if (/^(\S+) is less than (.+)$/.test(s)) return Number(lhs) < Number(evalExpr(RegExp.$2, v));
+  if (/^(\S+) is not (.+)$/.test(s)) return String(lhs) !== String(evalExpr(RegExp.$2, v));
+  if (/^(\S+) is (.+)$/.test(s)) return String(lhs) === String(evalExpr(RegExp.$2, v));
+  if (/^(\S+) contains (.+)$/.test(s)) {
+    const arr = v[tokens[0]];
+    if (Array.isArray(arr)) return arr.map(String).includes(String(evalExpr(RegExp.$2, v)));
+    return String(lhs).includes(String(evalExpr(RegExp.$2, v)));
+  }
+  return false;
+}
+
+// ── INTERPRETER ───────────────────────────────────────
+
+async function runCode() {
+  vars = {}; funcs = {};
+  running = true;
+  stepMode = false;
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('stepBtn').disabled = true;
+  lineHL.style.display = 'none';
+
+  const rawLines = editorEl.value.split('\n');
+  clearOutput();
+  print('Running...', 'system');
+  try {
+    await execLines(rawLines, 0, rawLines.length, vars);
+  } catch(e) {
+    if (e.message !== 'STOPPED') print('Runtime error: ' + e.message, 'err');
+  }
+  print('— Done —', 'system');
+  running = false;
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('stepBtn').disabled = false;
+  updateVarsPanel(vars);
+}
+
+function stopCode() {
+  running = false;
+  inputRow.classList.add('hidden');
+  inputResolve = null;
+  print('— Stopped —', 'warn');
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('stepBtn').disabled = false;
+  document.getElementById('nextBtn').disabled = true;
+  lineHL.style.display = 'none';
+}
+
+// ── STEP MODE ─────────────────────────────────────────
+
+function startStep() {
+  vars = {}; funcs = {};
+  stepLines = editorEl.value.split('\n');
+  stepIndex = 0;
+  stepVars = vars;
+  clearOutput();
+  print('Step mode — press → Next Line to execute line by line.', 'system');
+  document.getElementById('nextBtn').disabled = false;
+  document.getElementById('stepBtn').classList.add('active');
+  document.getElementById('stepBtn').disabled = true;
+  stepMode = true;
+  highlightLine(0);
+}
+
+function highlightLine(idx) {
+  const lines = editorEl.value.split('\n');
+  const lineH = parseFloat(getComputedStyle(editorEl).lineHeight);
+  const pad = 16;
+  lineHL.style.display = 'block';
+  lineHL.style.top = (pad + idx * lineH) + 'px';
+  lineHL.style.height = lineH + 'px';
+}
+
+async function stepNext() {
+  if (stepIndex >= stepLines.length) {
+    print('— End of program —', 'system');
+    document.getElementById('nextBtn').disabled = true;
+    lineHL.style.display = 'none';
+    document.getElementById('stepBtn').disabled = false;
+    stepMode = false;
+    return;
+  }
+  // Skip blank/comment lines
+  while (stepIndex < stepLines.length) {
+    const line = stepLines[stepIndex].trim();
+    if (line && !line.startsWith('//') && !line.startsWith('#')) break;
+    stepIndex++;
+  }
+  if (stepIndex >= stepLines.length) {
+    print('— End of program —', 'system');
+    document.getElementById('nextBtn').disabled = true;
+    lineHL.style.display = 'none';
+    return;
+  }
+  highlightLine(stepIndex);
+  print(`▶ Line ${stepIndex+1}: ${stepLines[stepIndex].trim()}`, 'step-marker');
+  running = true;
+  try {
+    const result = await execLine(stepLines, stepIndex, stepLines.length, vars);
+    if (result && result.jump !== undefined) stepIndex = result.jump;
+    else stepIndex++;
+  } catch(e) {
+    print('Error: ' + e.message, 'err');
+    stepIndex++;
+  }
+  running = false;
+  updateVarsPanel(vars);
+}
+
+// ── EXEC LINES ────────────────────────────────────────
+
+async function execLines(lines, start, end, v) {
+  let i = start;
+  while (i < end) {
+    if (!running && !stepMode) throw new Error('STOPPED');
+    const r = await execLine(lines, i, end, v);
+    if (r && r.jump !== undefined) i = r.jump;
+    else i++;
+    updateVarsPanel(v);
+  }
+}
+
+async function execLine(lines, i, end, v) {
+  const raw = lines[i];
+  if (!raw) return null;
+  const line = raw.trim();
+  if (!line || line.startsWith('//') || line.startsWith('#')) return null;
+
+  const toks = tokenize(line);
+  if (!toks.length) return null;
+  const cmd = toks[0].toLowerCase();
+  const rest = toks.slice(1);
+  const restStr = rest.join(' ');
+
+  // ── SET ──
+  if (cmd === 'set') {
+    // set result to call fn with arg
+    if (rest[2] && rest[2].toLowerCase() === 'to' && rest[3] && rest[3].toLowerCase() === 'call') {
+      const fnName = rest[4];
+      const argVal = rest[6] !== undefined ? evalExpr(rest.slice(6).join(' '), v) : undefined;
+      v[rest[0]] = await callFunc(fnName, argVal, v, lines);
+      pyEquiv(line, `${rest[0]} = ${fnName}(${argVal !== undefined ? JSON.stringify(argVal) : ''})`);
+      return null;
+    }
+    if (rest[1] && rest[1].toLowerCase() === 'to') {
+      const varName = rest[0];
+      const val = evalExpr(rest.slice(2).join(' '), v);
+      v[varName] = val;
+      pyEquiv(line, `${varName} = ${JSON.stringify(val)}`);
+      return null;
+    }
+    // set key "k" in dict to val
+    if (rest[0] && rest[0].toLowerCase() === 'key') {
+      const key = evalExpr(rest[1], v);
+      const dictName = rest[3];
+      const val = evalExpr(rest.slice(5).join(' '), v);
+      if (!v[dictName] || typeof v[dictName] !== 'object') throw new Error(`"${dictName}" is not a dict. Create it first with: create dict ${dictName}`);
+      v[dictName][key] = val;
+      pyEquiv(line, `${dictName}["${key}"] = ${JSON.stringify(val)}`);
+      return null;
+    }
+  }
+
+  // ── ADD ──
+  if (cmd === 'add') {
+    // add X to list Y
+    if (rest[2] && rest[2].toLowerCase() === 'to' && rest[3] && rest[3].toLowerCase() === 'list') {
+      const val = evalExpr(rest[0], v);
+      const listName = rest[4];
+      if (!Array.isArray(v[listName])) throw new Error(`"${listName}" is not a list. Create it first with: create list ${listName}`);
+      v[listName].push(val);
+      pyEquiv(line, `${listName}.append(${JSON.stringify(val)})`);
+      return null;
+    }
+    // add N to var
+    if (rest[2] && rest[2].toLowerCase() === 'to') {
+      const amt = evalExpr(rest[0], v);
+      const varName = rest[3] || rest[2];
+      const target = rest[2].toLowerCase() === 'to' ? rest[3] : rest[2];
+      v[target] = (Number(v[target]) || 0) + Number(amt);
+      pyEquiv(line, `${target} += ${amt}`);
+      return null;
+    }
+  }
+
+  // ── SUBTRACT ──
+  if (cmd === 'subtract' && rest[2] && rest[2].toLowerCase() === 'from') {
+    const amt = evalExpr(rest[0], v);
+    const varName = rest[3];
+    v[varName] = (Number(v[varName]) || 0) - Number(amt);
+    pyEquiv(line, `${varName} -= ${amt}`);
+    return null;
+  }
+
+  // ── MULTIPLY ──
+  if (cmd === 'multiply' && rest[2] && rest[2].toLowerCase() === 'by') {
+    const varName = rest[0]; const amt = evalExpr(rest[3], v);
+    v[varName] = (Number(v[varName]) || 0) * Number(amt);
+    pyEquiv(line, `${varName} *= ${amt}`); return null;
+  }
+
+  // ── DIVIDE ──
+  if (cmd === 'divide' && rest[2] && rest[2].toLowerCase() === 'by') {
+    const varName = rest[0]; const amt = Number(evalExpr(rest[3], v));
+    if (amt === 0) throw new Error('Cannot divide by zero — check your variable value.');
+    v[varName] = (Number(v[varName]) || 0) / amt;
+    pyEquiv(line, `${varName} /= ${amt}`); return null;
+  }
+
+  // ── SAY / SHOW / PRINT ──
+  if (cmd === 'say' || cmd === 'show' || cmd === 'print') {
+    const val = evalExpr(restStr, v);
+    const display = Array.isArray(val) ? '[' + val.map(x=>JSON.stringify(x)).join(', ') + ']'
+      : typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val);
+    print(display);
+    pyEquiv(line, `print(${restStr})`);
+    return null;
+  }
+
+  // ── ASK ──
+  if (cmd === 'ask') {
+    const m = restStr.match(/^(.+?)\s+and\s+store\s+in\s+(\S+)$/i);
+    if (m) {
+      const q = evalExpr(m[1].trim(), v);
+      const ans = await promptUser(String(q));
+      const num = parseFloat(ans);
+      v[m[2]] = isNaN(num) ? ans : num;
+      pyEquiv(line, `${m[2]} = input("${q}")`);
+    }
+    return null;
+  }
+
+  // ── CREATE LIST ──
+  if (cmd === 'create' && rest[0] && rest[0].toLowerCase() === 'list') {
+    v[rest[1]] = [];
+    pyEquiv(line, `${rest[1]} = []`);
+    return null;
+  }
+
+  // ── CREATE DICT ──
+  if (cmd === 'create' && rest[0] && rest[0].toLowerCase() === 'dict') {
+    v[rest[1]] = {};
+    pyEquiv(line, `${rest[1]} = {}`);
+    return null;
+  }
+
+  // ── GET ITEM n FROM list ──
+  if (cmd === 'get' && rest[0] && rest[0].toLowerCase() === 'item') {
+    const idx = Number(evalExpr(rest[1], v));
+    const listName = rest[3];
+    if (!Array.isArray(v[listName])) throw new Error(`"${listName}" is not a list`);
+    if (idx < 0 || idx >= v[listName].length) throw new Error(`List index ${idx} is out of range. The list "${listName}" has ${v[listName].length} items (indexes 0 to ${v[listName].length-1}).`);
+    print(String(v[listName][idx]));
+    pyEquiv(line, `print(${listName}[${idx}])`);
+    return null;
+  }
+
+  // ── GET ITEMS n TO m FROM list (slice) ──
+  if (cmd === 'get' && rest[0] && rest[0].toLowerCase() === 'items') {
+    const from = Number(evalExpr(rest[1], v));
+    const to = Number(evalExpr(rest[3], v));
+    const listName = rest[5];
+    if (!Array.isArray(v[listName])) throw new Error(`"${listName}" is not a list`);
+    const sliced = v[listName].slice(from, to + 1);
+    print('[' + sliced.map(x=>JSON.stringify(x)).join(', ') + ']');
+    pyEquiv(line, `print(${listName}[${from}:${to+1}])`);
+    return null;
+  }
+
+  // ── GET KEY ──
+  if (cmd === 'get' && rest[0] && rest[0].toLowerCase() === 'key') {
+    const key = evalExpr(rest[1], v);
+    const dictName = rest[3];
+    if (!v[dictName] || typeof v[dictName] !== 'object' || Array.isArray(v[dictName])) throw new Error(`"${dictName}" is not a dict`);
+    if (!v[dictName].hasOwnProperty(key)) throw new Error(`Key "${key}" not found in "${dictName}". Available keys: ${Object.keys(v[dictName]).join(', ')}`);
+    print(String(v[dictName][key]));
+    pyEquiv(line, `print(${dictName}["${key}"])`);
+    return null;
+  }
+
+  // ── REMOVE ITEM n FROM list ──
+  if (cmd === 'remove' && rest[0] && rest[0].toLowerCase() === 'item') {
+    const idx = Number(evalExpr(rest[1], v));
+    const listName = rest[3];
+    if (!Array.isArray(v[listName])) throw new Error(`"${listName}" is not a list`);
+    v[listName].splice(idx, 1);
+    pyEquiv(line, `${listName}.pop(${idx})`);
+    return null;
+  }
+
+  // ── REMOVE KEY ──
+  if (cmd === 'remove' && rest[0] && rest[0].toLowerCase() === 'key') {
+    const key = evalExpr(rest[1], v);
+    const dictName = rest[3];
+    delete v[dictName][key];
+    pyEquiv(line, `del ${dictName}["${key}"]`);
+    return null;
+  }
+
+  // ── COUNT ──
+  if (cmd === 'count') {
+    const name = rest[0];
+    if (Array.isArray(v[name])) { print(String(v[name].length)); pyEquiv(line, `print(len(${name}))`); }
+    else if (typeof v[name] === 'string') { print(String(v[name].length)); }
+    else throw new Error(`"${name}" is not a list or string`);
+    return null;
+  }
+
+  // ── SORT ──
+  if (cmd === 'sort') {
+    const name = rest[0];
+    const desc = rest[1] && rest[1].toLowerCase() === 'descending';
+    if (!Array.isArray(v[name])) throw new Error(`"${name}" is not a list`);
+    v[name] = [...v[name]].sort((a,b) => {
+      if (typeof a === 'number' && typeof b === 'number') return desc ? b-a : a-b;
+      return desc ? String(b).localeCompare(String(a)) : String(a).localeCompare(String(b));
+    });
+    pyEquiv(line, `${name}.sort(${desc?'reverse=True':''})`);
+    return null;
+  }
+
+  // ── REVERSE ──
+  if (cmd === 'reverse') {
+    const name = rest[0];
+    if (!Array.isArray(v[name])) throw new Error(`"${name}" is not a list`);
+    v[name] = [...v[name]].reverse();
+    pyEquiv(line, `${name}.reverse()`);
+    return null;
+  }
+
+  // ── FIND MAX/MIN/SUM/AVERAGE ──
+  if (cmd === 'find') {
+    const op = rest[0] ? rest[0].toLowerCase() : '';
+    const listName = rest[2];
+    if (!Array.isArray(v[listName])) throw new Error(`"${listName}" is not a list`);
+    const nums = v[listName].map(Number);
+    if (op === 'max') { print(String(Math.max(...nums))); pyEquiv(line, `print(max(${listName}))`); }
+    else if (op === 'min') { print(String(Math.min(...nums))); pyEquiv(line, `print(min(${listName}))`); }
+    else if (op === 'sum') { print(String(nums.reduce((a,b)=>a+b,0))); pyEquiv(line, `print(sum(${listName}))`); }
+    else if (op === 'average') { print(String(nums.reduce((a,b)=>a+b,0)/nums.length)); pyEquiv(line, `print(sum(${listName})/len(${listName}))`); }
+    // find index of X in list
+    else if (op === 'index') {
+      const val = evalExpr(rest[2], v);
+      const ln = rest[4];
+      if (!Array.isArray(v[ln])) throw new Error(`"${ln}" is not a list`);
+      const idx = v[ln].map(String).indexOf(String(val));
+      print(idx >= 0 ? String(idx) : 'not found');
+      pyEquiv(line, `print(${ln}.index(${JSON.stringify(val)}))`);
+    }
+    return null;
+  }
+
+  // ── CHECK IF list CONTAINS value ──
+  if (cmd === 'check' && rest[0] && rest[0].toLowerCase() === 'if') {
+    // check if X contains Y
+    const s = rest.slice(1).join(' ');
+    const m1 = s.match(/^(\S+)\s+contains\s+(.+)$/i);
+    if (m1) {
+      const thing = v[m1[1]];
+      const val = evalExpr(m1[2], v);
+      let result;
+      if (Array.isArray(thing)) result = thing.map(String).includes(String(val));
+      else result = String(thing).includes(String(val));
+      print(result ? 'yes' : 'no');
+      pyEquiv(line, `print(${JSON.stringify(val)} in ${m1[1]})`);
+      return null;
+    }
+    // check if X matches pattern
+    const m2 = s.match(/^(\S+)\s+matches\s+(.+)$/i);
+    if (m2) {
+      const val = String(evalExpr(m2[1], v));
+      const pat = evalExpr(m2[2], v);
+      const result = new RegExp('^' + pat + '$').test(val);
+      print(result ? 'yes — it matches!' : 'no — it does not match.');
+      pyEquiv(line, `import re\nprint(bool(re.fullmatch(${JSON.stringify(pat)}, ${m2[1]})))`);
+      return null;
+    }
+  }
+
+  // ── FILTER ──
+  if (cmd === 'filter') {
+    const listName = rest[0];
+    const condStr = rest.slice(2).join(' ');
+    if (!Array.isArray(v[listName])) throw new Error(`"${listName}" is not a list`);
+    const result = v[listName].filter(item => {
+      const testVars = {...v, __item: item};
+      return evalCond(['__item', ...condStr.split(' ')], testVars);
+    });
+    print('[' + result.map(x=>JSON.stringify(x)).join(', ') + ']');
+    pyEquiv(line, `print([x for x in ${listName} if x ${condStr}])`);
+    return null;
+  }
+
+  // ── FIND PATTERN ──
+  if (cmd === 'find' && rest[0] && rest[0].toLowerCase() === 'pattern') {
+    const pat = evalExpr(rest[1], v);
+    const text = String(evalExpr(rest[3], v));
+    const matches = text.match(new RegExp(pat, 'g')) || [];
+    print(matches.length ? 'Found: ' + matches.join(', ') : 'No matches found.');
+    pyEquiv(line, `import re\nprint(re.findall(${JSON.stringify(pat)}, ${rest[3]}))`);
+    return null;
+  }
+
+  // ── REPLACE PATTERN ──
+  if (cmd === 'replace' && rest[0] && rest[0].toLowerCase() === 'pattern') {
+    const pat = evalExpr(rest[1], v);
+    const varName = rest[3];
+    const replacement = evalExpr(rest[5], v);
+    v[varName] = String(v[varName]).replace(new RegExp(pat, 'g'), String(replacement));
+    pyEquiv(line, `import re\n${varName} = re.sub(${JSON.stringify(pat)}, ${JSON.stringify(replacement)}, ${varName})`);
+    return null;
+  }
+
+  // ── IF (single-line) ──
+  if (cmd === 'if') {
+    return await handleIf(toks, lines, i, end, v);
+  }
+
+  // ── OTHERWISE ── (handled by IF, skip standalone)
+  if (cmd === 'otherwise') return null;
+
+  // ── REPEAT n TIMES ──
+  if (cmd === 'repeat') {
+    const count = Math.min(Number(evalExpr(rest[0], v)) || 0, 10000);
+    if (rest[1] && rest[1].toLowerCase() === 'times') {
+      if (rest[2]) {
+        // single line
+        const action = rest.slice(2).join(' ');
+        for (let r = 0; r < count; r++) await execLine([action], 0, 1, v);
+        pyEquiv(line, `for _ in range(${count}):\n    ...`);
+        return null;
+      } else {
+        // block
+        let blockEnd = i+1;
+        while (blockEnd < end && lines[blockEnd].trim().toLowerCase() !== 'end repeat') blockEnd++;
+        const block = lines.slice(i+1, blockEnd);
+        pyEquiv(line, `for _ in range(${count}):`);
+        for (let r = 0; r < count; r++) await execLines(block, 0, block.length, v);
+        return { jump: blockEnd + 1 };
+      }
+    }
+  }
+
+  // ── FOR EACH item IN list ──
+  if (cmd === 'for' && rest[0] && rest[0].toLowerCase() === 'each') {
+    const itemVar = rest[1];
+    const listName = rest[3];
+
+    if (rest[4] && rest[4].toLowerCase() === 'say') {
+      // single line: for each item in list say item
+      const action = rest.slice(4).join(' ');
+      const iterable = v[listName];
+      const items = Array.isArray(iterable) ? iterable
+        : (typeof iterable === 'object' && iterable !== null ? Object.values(iterable) : []);
+      for (const item of items) {
+        v[itemVar] = item;
+        await execLine([action], 0, 1, v);
+      }
+      return null;
+    }
+
+    // for each key in dict
+    if (rest[2] && rest[2].toLowerCase() === 'key' && rest[3] && rest[3].toLowerCase() === 'in') {
+      const dictName = rest[4];
+      if (!v[dictName] || typeof v[dictName] !== 'object') throw new Error(`"${dictName}" is not a dict`);
+      if (rest[5]) {
+        const action = rest.slice(5).join(' ');
+        for (const key of Object.keys(v[dictName])) {
+          v[itemVar] = key;
+          await execLine([action], 0, 1, v);
+        }
+      }
+      return null;
+    }
+
+    // block form
+    let blockEnd = i + 1;
+    while (blockEnd < end && lines[blockEnd].trim().toLowerCase() !== 'end for') blockEnd++;
+    const block = lines.slice(i+1, blockEnd);
+    const iterable = v[listName];
+    const items = Array.isArray(iterable) ? iterable
+      : (typeof iterable === 'object' && iterable !== null ? Object.values(iterable) : []);
+    pyEquiv(line, `for ${itemVar} in ${listName}:`);
+    for (const item of items) {
+      v[itemVar] = item;
+      await execLines(block, 0, block.length, v);
+    }
+    return { jump: blockEnd + 1 };
+  }
+
+  // ── WHILE ──
+  if (cmd === 'while') {
+    const condTokens = [];
+    let actionStart = -1;
+    // Find condition end by looking for known action words
+    const actions = ['say','show','add','subtract','set','multiply','divide','repeat','call','remove'];
+    const restToks = rest;
+    // Try to split condition from action
+    for (let ai = 1; ai < restToks.length; ai++) {
+      if (actions.includes(restToks[ai].toLowerCase())) {
+        condTokens.push(...restToks.slice(0, ai));
+        actionStart = ai;
+        break;
+      }
+    }
+
+    let safetyLimit = 10000, iter = 0;
+    pyEquiv(line, `while ${condTokens.join(' ')}:`);
+
+    if (actionStart > -1) {
+      const action = restToks.slice(actionStart).join(' ');
+      while (evalCond(condTokens.length ? condTokens : rest, v)) {
+        if (++iter > safetyLimit) { print('⚠ While loop stopped after 10,000 iterations to prevent infinite loop.', 'warn'); break; }
+        await execLine([action], 0, 1, v);
+      }
+    } else {
+      // block form
+      let blockEnd = i+1;
+      while (blockEnd < end && lines[blockEnd].trim().toLowerCase() !== 'end while') blockEnd++;
+      const block = lines.slice(i+1, blockEnd);
+      while (evalCond(rest, v)) {
+        if (++iter > safetyLimit) { print('⚠ While loop stopped after 10,000 iterations.', 'warn'); break; }
+        await execLines(block, 0, block.length, v);
+      }
+      return { jump: blockEnd + 1 };
+    }
+    return null;
+  }
+
+  // ── DEFINE function ──
+  if (cmd === 'define') {
+    const fnName = rest[0];
+    const paramName = rest[2]; // "with paramName"
+    let blockEnd = i+1;
+    while (blockEnd < end && lines[blockEnd].trim().toLowerCase() !== 'end define') blockEnd++;
+    funcs[fnName] = { param: paramName, body: lines.slice(i+1, blockEnd) };
+    pyEquiv(line, `def ${fnName}(${paramName || ''}):`);
+    return { jump: blockEnd + 1 };
+  }
+
+  // ── CALL function ──
+  if (cmd === 'call') {
+    const fnName = rest[0];
+    const argVal = rest[2] !== undefined ? evalExpr(rest.slice(2).join(' '), v) : undefined;
+    await callFunc(fnName, argVal, v, lines);
+    pyEquiv(line, `${fnName}(${argVal !== undefined ? JSON.stringify(argVal) : ''})`);
+    return null;
+  }
+
+  // ── END markers ──
+  if (['end define','end repeat','end for','end while'].includes(line.toLowerCase())) return null;
+
+  print(`⚠ Unknown instruction: "${line}"`, 'warn');
+  print(`  → Check the reference panel on the right for valid commands.`, 'system');
+  return null;
+}
+
+async function handleIf(toks, lines, i, end, v) {
+  const rest = toks.slice(1);
+  const restStr = rest.join(' ');
+  const actions = ['say','show','print','set','add','subtract','multiply','divide','ask','call','create','find','sort','reverse','count','filter','check','replace'];
+
+  for (const a of actions) {
+    const rx = new RegExp(`^(\\S+\\s+(?:is greater than or equal to|is less than or equal to|is greater than|is less than|is not|is|contains)\\s+\\S+)\\s+(${a}\\s?.*)$`,'i');
+    const m = restStr.match(rx);
+    if (m) {
+      const condPart = m[1].trim().split(/\s+/);
+      const result = evalCond(condPart, v);
+      let otherwiseIdx = -1;
+      if (i+1 < end && lines[i+1].trim().toLowerCase().startsWith('otherwise')) otherwiseIdx = i+1;
+      if (result) {
+        await execLine([m[2].trim()], 0, 1, v);
+      } else if (otherwiseIdx >= 0) {
+        const ow = tokenize(lines[otherwiseIdx].trim()).slice(1).join(' ');
+        if (ow) await execLine([ow], 0, 1, v);
+      }
+      if (otherwiseIdx >= 0) return { jump: otherwiseIdx + 1 };
+      return null;
+    }
+  }
+  print(`⚠ Could not parse condition: "${toks.join(' ')}"`, 'err');
+  print(`  → Example: if score is greater than 10 say "Great!"`, 'system');
+  return null;
+}
+
+async function callFunc(fnName, argVal, v, lines) {
+  if (!funcs[fnName]) throw new Error(`Function "${fnName}" is not defined. Use "define ${fnName} with ..." first.`);
+  const fn = funcs[fnName];
+  const localVars = {...v};
+  if (fn.param && argVal !== undefined) localVars[fn.param] = argVal;
+  let returnVal = undefined;
+  // Execute body, check for return
+  for (let i = 0; i < fn.body.length; i++) {
+    const l = fn.body[i].trim();
+    if (l.toLowerCase().startsWith('return ')) {
+      returnVal = evalExpr(l.slice(7).trim(), localVars);
+      break;
+    }
+    await execLine(fn.body, i, fn.body.length, localVars);
+  }
+  // Copy mutations back to parent scope
+  for (const k of Object.keys(v)) if (localVars.hasOwnProperty(k)) v[k] = localVars[k];
+  return returnVal;
+}
+
+// ── REF TABS ──────────────────────────────────────────
+
+function showRef(tab) {
+  document.querySelectorAll('.ref-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.ref-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`ref-${tab}`).classList.remove('hidden');
+  document.querySelectorAll('.ref-tab').forEach(el => {
+    if (el.textContent.toLowerCase() === tab || el.textContent.toLowerCase().includes(tab.slice(0,3))) el.classList.add('active');
+  });
+}
+
+// ── LESSONS ───────────────────────────────────────────
+
+const lessons = [
+  { group: '🌱 Basics', items: [
+    { name: 'Hello World', code: `// Your first Cobra program!\nset name to "World"\nsay "Hello, " + name` },
+    { name: 'Variables', code: `set age to 17\nset name to "Jordan"\nset height to 5.9\n\nsay "Name: " + name\nsay "Age: " + age\nsay "Height: " + height\n\nadd 1 to age\nsay "Next year you'll be: " + age` },
+    { name: 'User Input', code: `ask "What is your name?" and store in name\nask "How old are you?" and store in age\n\nsay "Hello, " + name + "!"\n\nif age is greater than or equal to 18 say "You can vote!"\notherwise say "Not old enough to vote yet."` },
+    { name: 'Math', code: `set a to 20\nset b to 6\n\nadd b to a\nsay "After adding: " + a\n\nsubtract 3 from a\nsay "After subtracting: " + a\n\nmultiply a by 2\nsay "After multiplying: " + a\n\ndivide a by 4\nsay "After dividing: " + a` },
+  ]},
+  { group: '🔀 Control Flow', items: [
+    { name: 'If / Otherwise', code: `set score to 72\n\nif score is greater than 90 say "Grade: A"\nif score is greater than 80 say "Grade: B"\nif score is greater than 70 say "Grade: C"\notherwise say "Grade: D or below"` },
+    { name: 'Repeat Loop', code: `// Count from 1 to 5\nset counter to 1\n\nrepeat 5 times\n  say "Count: " + counter\n  add 1 to counter\nend repeat\n\nsay "Done counting!"` },
+    { name: 'While Loop', code: `set n to 1\nset total to 0\n\nwhile n is less than or equal to 10\n  add n to total\n  add 1 to n\nend while\n\nsay "Sum of 1 to 10 = " + total` },
+  ]},
+  { group: '📋 Lists', items: [
+    { name: 'List Basics', code: `create list fruits\nadd "apple" to list fruits\nadd "banana" to list fruits\nadd "cherry" to list fruits\nadd "date" to list fruits\n\nsay "All fruits:"\nfor each fruit in fruits say fruit\n\nsay "Total: " + count fruits\n\nsay "First item:"\nget item 0 from fruits\n\nsay "Slice (index 1 to 2):"\nget items 1 to 2 from fruits` },
+    { name: 'Sorting', code: `create list scores\nadd 45 to list scores\nadd 92 to list scores\nadd 13 to list scores\nadd 78 to list scores\nadd 56 to list scores\n\nsay "Original:"\nfor each s in scores say s\n\nsort scores\nsay "Sorted ascending:"\nfor each s in scores say s\n\nsort scores descending\nsay "Sorted descending:"\nfor each s in scores say s` },
+    { name: 'Algorithms', code: `create list nums\nadd 3 to list nums\nadd 7 to list nums\nadd 1 to list nums\nadd 9 to list nums\nadd 4 to list nums\n\nfind max in nums\nfind min in nums\nfind sum of nums\nfind average of nums\n\ncheck if nums contains 7\ncheck if nums contains 99\n\nfilter nums where greater than 4` },
+  ]},
+  { group: '📦 Dictionaries', items: [
+    { name: 'Dict Basics', code: `create dict person\nset key "name" in person to "Alex"\nset key "age" in person to 25\nset key "city" in person to "London"\n\nsay "Name:"\nget key "name" from person\n\nsay "Age:"\nget key "age" from person\n\nset key "age" in person to 26\nsay "Updated age:"\nget key "age" from person` },
+  ]},
+  { group: '⚙️ Functions', items: [
+    { name: 'Basic Function', code: `define greet with name\n  say "Hello, " + name + "!"\n  say "Welcome to Cobra."\nend define\n\ncall greet with "Alice"\ncall greet with "Bob"` },
+    { name: 'Return Values', code: `define square with n\n  return n * n\nend define\n\ndefine double with n\n  return n * 2\nend define\n\nset a to call square with 5\nset b to call double with 7\n\nsay "5 squared = " + a\nsay "7 doubled = " + b` },
+    { name: 'Fibonacci', code: `// Fibonacci sequence using a list\ncreate list fibs\nadd 0 to list fibs\nadd 1 to list fibs\n\nset i to 2\nrepeat 8 times\n  get item i from fibs\nend repeat\n\n// Let's build it manually\nset a to 0\nset b to 1\nsay "Fibonacci:"\nsay a\nsay b\nrepeat 8 times\n  set c to a + b\n  say c\n  set a to b\n  set b to c\nend repeat` },
+  ]},
+  { group: '🔍 Regex', items: [
+    { name: 'Pattern Matching', code: `set email to "user@example.com"\nset phone to "123-456-7890"\nset code to "ABC123"\n\nsay "Is email valid?"\ncheck if email matches "[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}"\n\nsay "Does phone match pattern?"\ncheck if phone matches "\\d{3}-\\d{3}-\\d{4}"\n\nsay "Find numbers in code:"\nfind pattern "\\d+" in code` },
+    { name: 'Find & Replace', code: `set sentence to "The   quick   brown   fox"\nsay "Original: " + sentence\n\nreplace pattern "\\s+" in sentence with " "\nsay "Cleaned: " + sentence\n\nset text to "hello world 2024"\nfind pattern "\\d+" in text\nfind pattern "[a-z]+" in text` },
+  ]},
+];
+
+function buildLessons() {
+  const container = document.getElementById('lessonList');
+  lessons.forEach(group => {
+    const g = document.createElement('div');
+    g.className = 'lesson-group';
+    g.innerHTML = `<div class="lesson-group-title">${group.group}</div>`;
+    group.items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'lesson-item';
+      el.textContent = item.name;
+      el.onclick = () => {
+        document.querySelectorAll('.lesson-item').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        editorEl.value = item.code;
+        clearOutput();
+        updateVarsPanel({});
+        vars = {};
+      };
+      g.appendChild(el);
+    });
+    container.appendChild(g);
+  });
+}
+
+buildLessons();
+
+// Load first lesson
+editorEl.value = lessons[0].items[0].code;
+document.querySelector('.lesson-item').classList.add('active');
+updateVarsPanel({});
+</script>
+</body>
+</html>
