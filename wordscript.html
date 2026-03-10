@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordScript</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=JetBrains+Mono:wght@400;500&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1008;
+    --paper: #f5f0e8;
+    --paper-dark: #ede6d6;
+    --amber: #c8861a;
+    --amber-light: #f0b245;
+    --red: #b83a2e;
+    --green: #2e7a4a;
+    --blue: #2a5c8a;
+    --muted: #7a6f5e;
+    --line: #cfc4b0;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Lato', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 18px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    border-bottom: 3px solid var(--amber);
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    letter-spacing: -0.5px;
+    color: var(--amber-light);
+  }
+
+  header span {
+    font-family: 'Lato', sans-serif;
+    font-size: 0.85rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr auto;
+    gap: 0;
+    height: calc(100vh - 70px);
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--line);
+  }
+
+  .panel-header {
+    background: var(--paper-dark);
+    padding: 10px 20px;
+    font-size: 0.72rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .run-btn {
+    background: var(--amber);
+    color: white;
+    border: none;
+    padding: 5px 18px;
+    border-radius: 2px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s;
+  }
+  .run-btn:hover { background: var(--amber-light); color: var(--ink); }
+
+  .clear-btn {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 4px 12px;
+    border-radius: 2px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+  .clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+  #editor {
+    flex: 1;
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    line-height: 2;
+    border: none;
+    background: var(--paper);
+    color: var(--ink);
+    resize: none;
+    outline: none;
+    letter-spacing: 0.2px;
+  }
+
+  #editor::placeholder { color: var(--line); }
+
+  #output-panel {
+    display: flex;
+    flex-direction: column;
+    background: #1a1a14;
+  }
+
+  #output-panel .panel-header {
+    background: #111108;
+    color: #665f4a;
+    border-bottom: 1px solid #333328;
+  }
+
+  #output {
+    flex: 1;
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.9;
+    color: #d4c9a8;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+
+  .out-line { display: block; }
+  .out-line.info { color: #7ab87a; }
+  .out-line.error { color: #e06060; }
+  .out-line.prompt { color: #7ab8d4; }
+  .out-line.value { color: #d4c9a8; }
+  .out-line.system { color: #665f4a; font-style: italic; }
+
+  #input-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: #111108;
+    border-top: 1px solid #333328;
+    gap: 10px;
+  }
+
+  #input-row label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #7ab8d4;
+  }
+
+  #user-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #444;
+    color: #d4c9a8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    padding: 4px 6px;
+    outline: none;
+  }
+
+  #submit-input {
+    background: #2a5c3a;
+    color: #7ab87a;
+    border: none;
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  #submit-input:hover { background: #3a7a50; }
+
+  #input-row.hidden { display: none; }
+
+  /* Reference panel */
+  .ref-panel {
+    grid-column: 1 / -1;
+    background: var(--ink);
+    color: var(--paper);
+    border-top: 2px solid var(--amber);
+    max-height: 210px;
+    overflow-y: auto;
+  }
+
+  .ref-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  .ref-group {
+    flex: 1;
+    min-width: 220px;
+    padding: 16px 20px;
+    border-right: 1px solid #333;
+  }
+
+  .ref-group h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 10px;
+  }
+
+  .ref-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.9;
+    color: #a89880;
+  }
+
+  .ref-item em {
+    color: #d4b870;
+    font-style: normal;
+  }
+
+  .ref-panel .panel-header {
+    background: #111;
+    color: #665f4a;
+    border-bottom: 1px solid #333;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>WordScript</h1>
+  <span>A language you write like instructions</span>
+</header>
+
+<div class="workspace">
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>✏️ Your Code</span>
+      <button class="run-btn" onclick="runCode()">▶ Run</button>
+    </div>
+    <textarea id="editor" placeholder="Write your instructions here...
+
+set name to &quot;Alice&quot;
+set age to 30
+say &quot;Hello, &quot; + name
+if age is greater than 18 say &quot;You are an adult.&quot;
+repeat 3 times say &quot;WordScript is fun!&quot;"></textarea>
+  </div>
+
+  <div id="output-panel">
+    <div class="panel-header">
+      <span>📄 Output</span>
+      <button class="clear-btn" onclick="clearOutput()">Clear</button>
+    </div>
+    <div id="output"><span class="out-line system">// Ready. Press Run to execute your code.</span>
+</div>
+    <div id="input-row" class="hidden">
+      <label>▶</label>
+      <input id="user-input" type="text" placeholder="Type your answer..." autocomplete="off">
+      <button id="submit-input" onclick="submitInput()">Enter</button>
+    </div>
+  </div>
+
+  <div class="ref-panel">
+    <div class="panel-header">📖 Language Reference</div>
+    <div class="ref-inner">
+      <div class="ref-group">
+        <h3>Variables</h3>
+        <div class="ref-item"><em>set</em> x <em>to</em> 10</div>
+        <div class="ref-item"><em>set</em> name <em>to</em> "Alice"</div>
+        <div class="ref-item"><em>add</em> 5 <em>to</em> x</div>
+        <div class="ref-item"><em>subtract</em> 2 <em>from</em> x</div>
+        <div class="ref-item"><em>multiply</em> x <em>by</em> 3</div>
+        <div class="ref-item"><em>divide</em> x <em>by</em> 2</div>
+      </div>
+      <div class="ref-group">
+        <h3>Output &amp; Input</h3>
+        <div class="ref-item"><em>say</em> "Hello there"</div>
+        <div class="ref-item"><em>say</em> x</div>
+        <div class="ref-item"><em>say</em> "Hi " + name</div>
+        <div class="ref-item"><em>ask</em> "Your name?" <em>and store in</em> name</div>
+        <div class="ref-item"><em>show</em> x (same as say)</div>
+      </div>
+      <div class="ref-group">
+        <h3>Conditionals</h3>
+        <div class="ref-item"><em>if</em> x <em>is</em> 5 <em>say</em> "yes"</div>
+        <div class="ref-item"><em>if</em> x <em>is greater than</em> 3 ...</div>
+        <div class="ref-item"><em>if</em> x <em>is less than</em> 10 ...</div>
+        <div class="ref-item"><em>if</em> x <em>is not</em> 0 ...</div>
+        <div class="ref-item"><em>otherwise say</em> "no"</div>
+      </div>
+      <div class="ref-group">
+        <h3>Loops &amp; Logic</h3>
+        <div class="ref-item"><em>repeat</em> 5 <em>times say</em> "hi"</div>
+        <div class="ref-item"><em>repeat</em> 5 <em>times</em> (multi-line block)</div>
+        <div class="ref-item"><em>end repeat</em></div>
+        <div class="ref-item"><em>wait</em> (pause for input)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  WordScript Interpreter
+// ═══════════════════════════════════════════════
+
+let variables = {};
+let outputEl = document.getElementById('output');
+let inputRow = document.getElementById('input-row');
+let userInputEl = document.getElementById('user-input');
+
+// Execution state for async input handling
+let executionQueue = [];
+let waitingForInput = false;
+let inputResolve = null;
+
+function clearOutput() {
+  outputEl.innerHTML = '<span class="out-line system">// Output cleared.</span>\n';
+}
+
+function print(text, type = 'value') {
+  const span = document.createElement('span');
+  span.className = `out-line ${type}`;
+  span.textContent = text;
+  outputEl.appendChild(span);
+  outputEl.appendChild(document.createTextNode('\n'));
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+function promptUser(question) {
+  return new Promise((resolve) => {
+    print('? ' + question, 'prompt');
+    inputRow.classList.remove('hidden');
+    userInputEl.focus();
+    inputResolve = resolve;
+    waitingForInput = true;
+  });
+}
+
+function submitInput() {
+  if (!waitingForInput || !inputResolve) return;
+  const val = userInputEl.value;
+  print('  → ' + val, 'system');
+  userInputEl.value = '';
+  inputRow.classList.add('hidden');
+  waitingForInput = false;
+  const resolve = inputResolve;
+  inputResolve = null;
+  resolve(val);
+}
+
+document.getElementById('user-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitInput();
+});
+
+// ── Tokenizer / Expression Evaluator ──────────
+
+function evalExpr(expr, vars) {
+  if (expr === undefined || expr === '') return '';
+  expr = expr.trim();
+
+  // String concatenation with +
+  // Split on + but not inside quotes
+  const parts = smartSplit(expr, '+');
+  if (parts.length > 1) {
+    return parts.map(p => evalExpr(p.trim(), vars)).join('');
+  }
+
+  // Quoted string
+  if ((expr.startsWith('"') && expr.endsWith('"')) ||
+      (expr.startsWith("'") && expr.endsWith("'"))) {
+    return expr.slice(1, -1);
+  }
+
+  // Number
+  if (!isNaN(expr) && expr !== '') return parseFloat(expr);
+
+  // Boolean literals
+  if (expr === 'true') return true;
+  if (expr === 'false') return false;
+
+  // Variable
+  if (vars.hasOwnProperty(expr)) return vars[expr];
+
+  // Fallback: return as string
+  return expr;
+}
+
+function smartSplit(str, delim) {
+  const parts = [];
+  let depth = 0, current = '', inStr = false, strChar = '';
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (inStr) {
+      current += c;
+      if (c === strChar) inStr = false;
+    } else if (c === '"' || c === "'") {
+      inStr = true; strChar = c; current += c;
+    } else if (c === delim) {
+      parts.push(current); current = '';
+    } else {
+      current += c;
+    }
+  }
+  parts.push(current);
+  return parts;
+}
+
+// ── Condition Evaluator ───────────────────────
+
+function evalCondition(tokens, vars) {
+  // tokens: array of words after "if"
+  // e.g. ["x", "is", "greater", "than", "5"]
+  const str = tokens.join(' ');
+  const varName = tokens[0];
+  const lhs = evalExpr(varName, vars);
+
+  if (str.match(/^(\S+) is greater than (.+)$/)) {
+    const rhs = evalExpr(RegExp.$2, vars);
+    return Number(lhs) > Number(rhs);
+  }
+  if (str.match(/^(\S+) is less than (.+)$/)) {
+    const rhs = evalExpr(RegExp.$2, vars);
+    return Number(lhs) < Number(rhs);
+  }
+  if (str.match(/^(\S+) is not (.+)$/)) {
+    const rhs = evalExpr(RegExp.$2, vars);
+    return String(lhs) !== String(rhs);
+  }
+  if (str.match(/^(\S+) is (.+)$/)) {
+    const rhs = evalExpr(RegExp.$2, vars);
+    return String(lhs) === String(rhs);
+  }
+  return false;
+}
+
+// ── Main Interpreter ──────────────────────────
+
+async function runCode() {
+  const code = document.getElementById('editor').value;
+  variables = {};
+  outputEl.innerHTML = '';
+  print('Running...', 'system');
+
+  const lines = code.split('\n').map(l => l.trim()).filter(l => l !== '' && !l.startsWith('//') && !l.startsWith('#'));
+
+  await executeLines(lines, 0, lines.length, variables);
+  print('— Done —', 'system');
+}
+
+async function executeLines(lines, start, end, vars) {
+  let i = start;
+  while (i < end) {
+    const result = await executeLine(lines, i, end, vars);
+    if (result && result.jump !== undefined) {
+      i = result.jump;
+    } else {
+      i++;
+    }
+  }
+}
+
+async function executeLine(lines, i, end, vars) {
+  const line = lines[i];
+  if (!line) return null;
+  const tokens = tokenizeLine(line);
+  if (!tokens.length) return null;
+
+  const cmd = tokens[0].toLowerCase();
+
+  // ── SET x TO value ──
+  if (cmd === 'set' && tokens[2] && tokens[2].toLowerCase() === 'to') {
+    const varName = tokens[1];
+    const valExpr = tokens.slice(3).join(' ');
+    vars[varName] = evalExpr(valExpr, vars);
+    return null;
+  }
+
+  // ── ADD n TO x ──
+  if (cmd === 'add' && tokens.length >= 4 && tokens[2].toLowerCase() === 'to') {
+    const amount = evalExpr(tokens[1], vars);
+    const varName = tokens[3];
+    vars[varName] = (Number(vars[varName]) || 0) + Number(amount);
+    return null;
+  }
+
+  // ── SUBTRACT n FROM x ──
+  if (cmd === 'subtract' && tokens.length >= 4 && tokens[2].toLowerCase() === 'from') {
+    const amount = evalExpr(tokens[1], vars);
+    const varName = tokens[3];
+    vars[varName] = (Number(vars[varName]) || 0) - Number(amount);
+    return null;
+  }
+
+  // ── MULTIPLY x BY n ──
+  if (cmd === 'multiply' && tokens.length >= 4 && tokens[2].toLowerCase() === 'by') {
+    const varName = tokens[1];
+    const amount = evalExpr(tokens[3], vars);
+    vars[varName] = (Number(vars[varName]) || 0) * Number(amount);
+    return null;
+  }
+
+  // ── DIVIDE x BY n ──
+  if (cmd === 'divide' && tokens.length >= 4 && tokens[2].toLowerCase() === 'by') {
+    const varName = tokens[1];
+    const amount = evalExpr(tokens[3], vars);
+    if (Number(amount) === 0) { print('Error: cannot divide by zero.', 'error'); return null; }
+    vars[varName] = (Number(vars[varName]) || 0) / Number(amount);
+    return null;
+  }
+
+  // ── SAY / SHOW ──
+  if (cmd === 'say' || cmd === 'show' || cmd === 'print') {
+    const val = evalExpr(tokens.slice(1).join(' '), vars);
+    print(String(val));
+    return null;
+  }
+
+  // ── ASK "question" AND STORE IN varName ──
+  if (cmd === 'ask') {
+    const full = tokens.slice(1).join(' ');
+    const storeMatch = full.match(/^(.+?)\s+and\s+store\s+in\s+(\S+)$/i);
+    if (storeMatch) {
+      const question = evalExpr(storeMatch[1].trim(), vars);
+      const varName = storeMatch[2];
+      const answer = await promptUser(String(question));
+      const num = parseFloat(answer);
+      vars[varName] = isNaN(num) ? answer : num;
+    } else {
+      const question = evalExpr(full, vars);
+      await promptUser(String(question));
+    }
+    return null;
+  }
+
+  // ── IF condition VERB ... (single-line) ──
+  if (cmd === 'if') {
+    const rest = tokens.slice(1);
+    // Find embedded verb (say/show/set/add/etc.) after condition
+    const condVerbs = ['say','show','print','set','add','subtract','multiply','divide','ask'];
+    let splitIdx = -1;
+
+    // Find "is greater than", "is less than", "is not", "is" — then look for action after value
+    const restStr = rest.join(' ');
+    // Try to find where condition ends by finding a known action word not inside condition
+    for (let v of condVerbs) {
+      // Pattern: "condition verb ..."
+      const rx = new RegExp(`^(\\S+\\s+(?:is greater than|is less than|is not|is)\\s+\\S+)\\s+(${v}\\s.+)$`, 'i');
+      const m = restStr.match(rx);
+      if (m) {
+        const condPart = m[1].trim().split(/\s+/);
+        const actionPart = m[2].trim();
+        const result = evalCondition(condPart, vars);
+        // Check for "otherwise" on next line
+        let otherwiseIdx = -1;
+        if (i + 1 < end && lines[i+1].toLowerCase().startsWith('otherwise')) {
+          otherwiseIdx = i + 1;
+        }
+        if (result) {
+          await executeLine([actionPart], 0, 1, vars);
+        } else if (otherwiseIdx >= 0) {
+          const otherwiseAction = tokenizeLine(lines[otherwiseIdx]).slice(1).join(' ');
+          if (otherwiseAction) await executeLine([otherwiseAction], 0, 1, vars);
+        }
+        if (otherwiseIdx >= 0) return { jump: otherwiseIdx + 1 };
+        return null;
+      }
+    }
+
+    // Multi-line if block (not implemented inline)
+    print(`Note: Could not parse condition: "${line}"`, 'error');
+    return null;
+  }
+
+  // ── OTHERWISE (standalone, skip — handled by IF) ──
+  if (cmd === 'otherwise') {
+    return null;
+  }
+
+  // ── REPEAT n TIMES action (single-line) ──
+  if (cmd === 'repeat') {
+    const countVal = evalExpr(tokens[1], vars);
+    const count = parseInt(countVal) || 0;
+
+    // single-line: repeat N times say ...
+    if (tokens[3] && tokens[2].toLowerCase() === 'times') {
+      const actionTokens = tokens.slice(3);
+      const actionLine = actionTokens.join(' ');
+      for (let r = 0; r < count; r++) {
+        await executeLine([actionLine], 0, 1, vars);
+      }
+      return null;
+    }
+
+    // multi-line block: repeat N times ... end repeat
+    if (tokens[2] && tokens[2].toLowerCase() === 'times') {
+      let blockEnd = i + 1;
+      while (blockEnd < end && lines[blockEnd].toLowerCase() !== 'end repeat') blockEnd++;
+      const blockLines = lines.slice(i + 1, blockEnd);
+      for (let r = 0; r < count; r++) {
+        await executeLines(blockLines, 0, blockLines.length, vars);
+      }
+      return { jump: blockEnd + 1 };
+    }
+  }
+
+  // ── END REPEAT (handled above) ──
+  if (line.toLowerCase() === 'end repeat') return null;
+
+  // ── Unknown ──
+  print(`Unknown instruction: "${line}"`, 'error');
+  return null;
+}
+
+function tokenizeLine(line) {
+  const tokens = [];
+  let current = '';
+  let inStr = false;
+  let strChar = '';
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inStr) {
+      current += c;
+      if (c === strChar) { tokens.push(current); current = ''; inStr = false; }
+    } else if (c === '"' || c === "'") {
+      inStr = true; strChar = c; current = c;
+    } else if (c === ' ') {
+      if (current) { tokens.push(current); current = ''; }
+    } else {
+      current += c;
+    }
+  }
+  if (current) tokens.push(current);
+  return tokens;
+}
+
+// Load example on start
+document.getElementById('editor').value = `set name to "Alex"
+set score to 0
+
+ask "What is your name?" and store in name
+say "Welcome, " + name
+
+set score to 85
+say "Your score is: " + score
+
+if score is greater than 90 say "Excellent work!"
+if score is greater than 70 say "Good job!"
+otherwise say "Keep practicing."
+
+repeat 3 times say "⭐"
+
+add 15 to score
+say "Bonus added! New score: " + score`;
+</script>
+</body>
+</html>
